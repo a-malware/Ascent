@@ -1,0 +1,13 @@
+node_modules/
+target/
+.anchor/
+.local_keys/
+__MACOSX/
+id.json
+out.txt
+.DS_Store
+.env
+.env.*
+*.log
+dist/
+build/
