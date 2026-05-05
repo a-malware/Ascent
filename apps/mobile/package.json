@@ -66,6 +66,7 @@
     "expo-web-browser": "15.0.8",
     "graceful-fs": "^4.2.11",
     "html-to-image": "1.11.13",
+    "leven": "^4.1.0",
     "lodash": "4.17.21",
     "lucide-react-native": "0.525.0",
     "moti": "0.30.0",
