@@ -47,7 +47,7 @@ const VOUCHERS = [
 const VOTE_PROPOSALS = [
   { question: "Accept node 5gYo...0Cq6 into Phase 2?",          context: "5/5 tasks done · validity rate 97% · no slashing history." },
   { question: "Slash node 0aJk...9Pz2 for double-sign violation?", context: "Evidence: two conflicting epoch messages at slot #4,821,033." },
-  { question: "Increase stake minimum from 2 SOL → 2.5 SOL?",   context: "Protects against low-cost Sybil identities. 74% of validators support." },
+  { question: "Increase stake minimum from 2 POR → 2.5 POR?",   context: "Protects against low-cost Sybil identities. 74% of validators support." },
 ];
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -599,7 +599,7 @@ export default function Merit() {
         {Stepper}
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 17, fontWeight: 800, color: "#0D1421" }}>Get a Helper</div>
-          <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 2 }}>A trusted node stakes SOL as collateral on your behalf</div>
+          <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 2 }}>A trusted node stakes POR as collateral on your behalf</div>
         </div>
 
         {voucherStatus === "accepted" ? (
@@ -655,7 +655,7 @@ export default function Merit() {
                       <div style={{ background: "#FFFBEB", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
                         <div style={{ fontSize: 12, color: "#92400E", fontWeight: 600 }}>⚠️ Risk Disclosure</div>
                         <div style={{ fontSize: 12, color: "#78350F", marginTop: 4 }}>
-                          This helper will stake <strong>2.5 SOL</strong> as collateral. Dishonest behaviour results in stake slash and reputation penalty for both parties.
+                          This helper will stake <strong>2.5 POR</strong> as collateral. Dishonest behaviour results in stake slash and reputation penalty for both parties.
                         </div>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6B7280", marginBottom: 14 }}>

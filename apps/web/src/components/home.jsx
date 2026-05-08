@@ -33,8 +33,7 @@ const ACTIVITY_META = {
 
 export default function Home() {
   const {
-    portfolioBalance,
-    portfolioUSD,
+    walletBalance,
     reputation,
     phase,
     tasksCompleted,
@@ -106,7 +105,7 @@ export default function Home() {
             >
               {hideBalance
                 ? "••••••"
-                : `$${portfolioUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                : `${walletBalance.toFixed(2)} POR`}
             </div>
             <div
               style={{
@@ -115,7 +114,7 @@ export default function Home() {
                 marginTop: 4,
               }}
             >
-              {hideBalance ? "•••" : `${portfolioBalance.toFixed(2)} SOL`}
+              {hideBalance ? "•••" : `$${(walletBalance * 1.5).toFixed(2)} USD (Est.)`}
             </div>
           </div>
           <button

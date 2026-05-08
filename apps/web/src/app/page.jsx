@@ -13,7 +13,8 @@ import SwapModal  from "@/components/modals/SwapModal";
 import SendModal  from "@/components/modals/SendModal";
 import ClaimModal from "@/components/modals/ClaimModal";
 import SlashModal from "@/components/modals/SlashModal";
-import { WalletConnectButton } from "@/chain/wallet";
+import { NodeProvider, NodeStatusBadge } from "@/chain/node.jsx";
+import { useSyncStore } from "@/chain/useSyncStore";
 import {
   Home as HomeIcon,
   Zap,
@@ -41,6 +42,7 @@ export default function App() {
   } = useStore();
 
   const [showSplash, setShowSplash] = useState(true);
+  useSyncStore(); // polls Python backend every 6s → syncs Zustand store
 
   const TABS = [
     { id: "home",     label: "Home",     Icon: HomeIcon   },
@@ -100,7 +102,7 @@ export default function App() {
   };
 
   return (
-    <>
+    <NodeProvider>
       <style jsx global>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #E8EDF5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -207,7 +209,7 @@ export default function App() {
               </div>
               {/* Right side: Wallet button + Rep badge + Bell */}
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <WalletConnectButton />
+                <NodeStatusBadge />
                 {/* Reputation Orb Badge */}
                 <div
                   style={{
@@ -463,6 +465,6 @@ export default function App() {
           style: { borderRadius: 14, fontFamily: "inherit", fontSize: 14 },
         }}
       />
-    </>
+    </NodeProvider>
   );
 }

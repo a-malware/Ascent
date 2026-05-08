@@ -1,224 +1,127 @@
 /**
  * chain/instructions.js
  *
- * One async function per on-chain instruction.
- * Each function:
- *   1. Derives all required PDAs
- *   2. Calls program.methods.xxx().accounts({}).rpc()
- *   3. Returns the transaction signature string
+ * One async function per protocol action, now backed by the Python REST API.
+ * The calling signature is intentionally kept close to the old Solana version
+ * so existing components need minimal changes.
  *
- * Import pattern in components:
- *   import { registerNode, submitTaskProof } from "@/chain/instructions";
+ * Import pattern (same as before):
+ *   import { registerNode, submitTaskProof, vouchForNode } from "@/chain/instructions";
  */
 
-import * as anchor from "@coral-xyz/anchor";
-const { BN } = anchor;
-import { SystemProgram } from "@solana/web3.js";
 import {
-  getProgram,
-  configPda,
-  nodePda,
-  vouchPda,
-  slashVotePda,
-} from "./program";
-import { TASK_DATASET, TASK_TREE, getMerkleProof } from "./merkle";
-
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
-/** Convert a Buffer to a number[] (what Anchor expects for [u8; 32] / Vec<[u8;32]>). */
-const bufToArr = (buf) => Array.from(buf);
+  fetchTasks,
+  submitTasks,
+  vouchForNode as apiVouch,
+  fetchEligibleVouchers,
+  fetchPhase2Nodes,
+  fetchColdstartStatus,
+  sendTokens,
+  fetchVouchStatus,
+  penalizeNode,
+} from "./api";
 
 // ─── 1. register_node ─────────────────────────────────────────────────────────
+// In the Python backend, registration happens automatically on node startup.
+// This call is a no-op in the new architecture — we just return the status.
 
-/**
- * Register the connected wallet as a new Phase-1 node.
- * @param {AnchorProvider} provider
- * @returns {Promise<string>} transaction signature
- */
-export async function registerNode(provider) {
-  const program = getProgram(provider);
-  const owner   = provider.wallet.publicKey;
-  const [config]    = configPda();
-  const [nodeState] = nodePda(owner);
-
-  return program.methods
-    .registerNode()
-    .accounts({
-      owner,
-      config,
-      nodeState,
-      systemProgram: SystemProgram.programId,
-    })
-    .rpc();
+export async function registerNode(_nodeId) {
+  return fetchColdstartStatus(_nodeId);
 }
 
-// ─── 2. submit_task_proof (Fix 1A — Merkle inclusion proof) ──────────────────
+// ─── 2. submit_task_proof ─────────────────────────────────────────────────────
 
 /**
- * Submit a Merkle inclusion proof for a Phase-1 task.
+ * Fetch and auto-submit Phase-1 tasks.
  *
- * When the network config has a zero Merkle root (localnet / demo mode),
- * the contract accepts any submission — so we can pass the real leaf data
- * and clients will still succeed even without a real dataset.
+ * The Python backend's HASH_PREIMAGE tasks require the node to compute
+ * SHA-256(challenge). We do that here in the browser.
  *
- * For devnet with a real Merkle root, we derive the proof from TASK_DATASET.
- *
- * @param {AnchorProvider} provider
- * @param {number}         taskIndex 0-based
- * @param {Buffer|null}    leafData  32 bytes; pass null to use default dataset
- * @param {Buffer[]|null}  proof     Merkle siblings; pass null to auto-derive
- * @returns {Promise<string>} transaction signature
+ * @param {string} nodeId
+ * @returns {Promise<{ score, passed, phase }>}
  */
-export async function submitTaskProof(provider, taskIndex, leafData = null, proof = null) {
-  const program = getProgram(provider);
-  const owner   = provider.wallet.publicKey;
-  const [config]    = configPda();
-  const [nodeState] = nodePda(owner);
+export async function submitTaskProof(nodeId) {
+  // 1. Fetch the assigned tasks
+  const { tasks } = await fetchTasks(nodeId);
+  if (!tasks || tasks.length === 0) {
+    throw new Error("No tasks assigned");
+  }
 
-  // Use the canonical dataset leaf if not provided
-  const leaf = leafData ?? TASK_DATASET[taskIndex];
-  // Derive the Merkle proof from the canonical tree if not provided
-  const siblings = proof ?? getMerkleProof(TASK_TREE.layers, taskIndex);
+  // 2. Solve each task client-side
+  const submissions = await Promise.all(
+    tasks.map(async (task) => {
+      if (task.type === "HASH_PREIMAGE" || task.type === "VERIFY_HASH") {
+        // Compute SHA-256 of the challenge using the Web Crypto API
+        const encoder = new TextEncoder();
+        const data = encoder.encode(task.challenge);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const answer = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+        return { task_id: task.task_id, answer };
+      }
+      if (task.type === "SIGN_CHALLENGE") {
+        // Use AUTO_SIGN mode — the backend will verify using the node's own key
+        return { task_id: task.task_id, signature: "AUTO_SIGN", public_key: "AUTO_SIGN" };
+      }
+      return { task_id: task.task_id, answer: "" };
+    })
+  );
 
-  return program.methods
-    .submitTaskProof(
-      taskIndex,
-      bufToArr(leaf),               // [u8; 32] → number[]
-      siblings.map(bufToArr),       // Vec<[u8;32]> → number[][]
-    )
-    .accounts({ owner, config, nodeState })
-    .rpc();
+  // 3. Submit all at once
+  return submitTasks(nodeId, submissions);
 }
 
 // ─── 3. vouch_for_node ───────────────────────────────────────────────────────
 
 /**
  * Stake reputation to vouch for a Phase-2 candidate.
- * @param {AnchorProvider} provider
- * @param {PublicKey}       candidatePublicKey
- * @returns {Promise<string>}
+ * @param {string} targetNodeId  the candidate's node_id
  */
-export async function vouchForNode(provider, candidatePublicKey) {
-  const program      = getProgram(provider);
-  const voucherOwner = provider.wallet.publicKey;
-  const [config]        = configPda();
-  const [voucherState]  = nodePda(voucherOwner);
-  const [candidateState]= nodePda(candidatePublicKey);
-  const [vouchRecord]   = vouchPda(voucherOwner, candidatePublicKey);
-
-  return program.methods
-    .vouchForNode()
-    .accounts({
-      voucherOwner,
-      config,
-      voucherState,
-      candidateState,
-      vouchRecord,
-      systemProgram: SystemProgram.programId,
-    })
-    .rpc();
+export async function vouchForNode(targetNodeId) {
+  return apiVouch(targetNodeId);
 }
 
-// ─── 4. cast_vote (Fix 1B — no self-reported honesty) ────────────────────────
+// ─── 4. cast_vote ─────────────────────────────────────────────────────────────
+// Voting is driven automatically by the consensus loop on the backend.
+// This export is kept for UI components that show a "Vote" button.
 
-/**
- * Record that the node participated in the current consensus round.
- * @param {AnchorProvider} provider
- * @param {number}         round  the current_round value from NetworkConfig
- * @returns {Promise<string>}
- */
-export async function castVote(provider, round) {
-  const program = getProgram(provider);
-  const owner   = provider.wallet.publicKey;
-  const [config]    = configPda();
-  const [nodeState] = nodePda(owner);
-
-  return program.methods
-    .castVote(new BN(round))
-    .accounts({ owner, config, nodeState })
-    .rpc();
+export async function castVote(_nodeId) {
+  // The Python consensus loop handles this. We just return a success stub.
+  return { success: true, message: "Vote will be cast in the next consensus round." };
 }
 
 // ─── 5. release_voucher_stake ─────────────────────────────────────────────────
+// Stake is released automatically when a node graduates in the Python backend.
 
-/**
- * Voucher reclaims staked reputation after candidate graduates.
- * @param {AnchorProvider} provider
- * @param {PublicKey}       candidatePublicKey
- * @returns {Promise<string>}
- */
-export async function releaseVoucherStake(provider, candidatePublicKey) {
-  const program      = getProgram(provider);
-  const voucherOwner = provider.wallet.publicKey;
-  const [voucherState]  = nodePda(voucherOwner);
-  const [candidateState]= nodePda(candidatePublicKey);
-  const [vouchRecord]   = vouchPda(voucherOwner, candidatePublicKey);
-
-  return program.methods
-    .releaseVoucherStake()
-    .accounts({
-      voucherOwner,
-      voucherState,
-      candidateState,
-      vouchRecord,
-    })
-    .rpc();
+export async function releaseVoucherStake(candidateNodeId) {
+  return fetchVouchStatus(candidateNodeId);
 }
 
-// ─── 6. propose_slash (Fix 1C) ────────────────────────────────────────────────
+// ─── 6. get_phase2_nodes ─────────────────────────────────────────────────────
 
-/**
- * A Full node proposes to slash a misbehaving candidate (adds 1 vote).
- * @param {AnchorProvider} provider
- * @param {PublicKey}       candidatePublicKey
- * @returns {Promise<string>}
- */
-export async function proposeSlash(provider, candidatePublicKey) {
-  const program  = getProgram(provider);
-  const proposer = provider.wallet.publicKey;
-  const [proposerState]  = nodePda(proposer);
-  const [config]         = configPda();
-  const [candidateState] = nodePda(candidatePublicKey);
-  const [slashVote]      = slashVotePda(candidatePublicKey);
-
-  return program.methods
-    .proposeSlash()
-    .accounts({
-      proposer,
-      proposerState,
-      config,
-      candidateState,
-      slashVote,
-      systemProgram: SystemProgram.programId,
-    })
-    .rpc();
+export async function getPhase2Nodes() {
+  return fetchPhase2Nodes();
 }
 
-// ─── 7. execute_slash (Fix 1C) ────────────────────────────────────────────────
+// ─── 7. get_eligible_vouchers ─────────────────────────────────────────────────
 
-/**
- * Execute the slash once 3 votes have been accumulated.
- * @param {AnchorProvider} provider
- * @param {PublicKey}       candidatePublicKey
- * @param {PublicKey}       voucherPublicKey   voucher who staked on this candidate
- * @returns {Promise<string>}
- */
-export async function executeSlash(provider, candidatePublicKey, voucherPublicKey) {
-  const program  = getProgram(provider);
-  const executor = provider.wallet.publicKey;
-  const [config]         = configPda();
-  const [slashVote]      = slashVotePda(candidatePublicKey);
-  const [candidateState] = nodePda(candidatePublicKey);
-  const [vouchRecord]    = vouchPda(voucherPublicKey, candidatePublicKey);
+export async function getEligibleVouchers() {
+  return fetchEligibleVouchers();
+}
 
-  return program.methods
-    .executeSlash()
-    .accounts({
-      executor,
-      config,
-      slashVote,
-      candidateState,
-      vouchRecord,
-    })
-    .rpc();
+// ─── 8. send_tokens ───────────────────────────────────────────────────────────
+
+export async function sendPOR(toAddress, amount) {
+  return sendTokens(toAddress, amount);
+}
+
+// ─── 9. slashing ──────────────────────────────────────────────────────────────
+
+export async function proposeSlash(targetNodeId) {
+  // In PoR L1, slashing is immediate via penalizeNode
+  return penalizeNode(targetNodeId);
+}
+
+export async function executeSlash(targetNodeId) {
+  return penalizeNode(targetNodeId);
 }

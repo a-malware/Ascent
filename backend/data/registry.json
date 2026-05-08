@@ -1,0 +1,30 @@
+{
+  "97bfc327a52972c3cd326c67829ad84ef56988138f73db888ff16f4d17547fb0": {
+    "node_id": "97bfc327a52972c3cd326c67829ad84ef56988138f73db888ff16f4d17547fb0",
+    "public_key": "l7/DJ6UpcsPNMmxngprYTvVpiBOPc9uIj/FvTRdUf7A=",
+    "phase": "FULL_NODE",
+    "honest_rounds": 0,
+    "voucher": null
+  },
+  "9xVq...2Lk1": {
+    "node_id": "9xVq...2Lk1",
+    "public_key": "UNKNOWN_SYNC_NEEDED",
+    "phase": "BANNED",
+    "honest_rounds": 0,
+    "voucher": null
+  },
+  "818d3539564d6d8b997fe516adc2ca879b4fedaced39a2fed652b44aa053b3a1": {
+    "node_id": "818d3539564d6d8b997fe516adc2ca879b4fedaced39a2fed652b44aa053b3a1",
+    "public_key": "gY01OVZNbYuZf+UWrcLKh5tP7aztOaL+1lK0SqBTs6E=",
+    "phase": "PHASE_1",
+    "honest_rounds": 0,
+    "voucher": null
+  },
+  "20a5a334ce9c7a4425fb0909a90e80ce9e1f3193647cb61d874632ac80d8b710": {
+    "node_id": "20a5a334ce9c7a4425fb0909a90e80ce9e1f3193647cb61d874632ac80d8b710",
+    "public_key": "IKWjNM6cekQl+wkJqQ6Azp4fMZNkfLYdh0YyrIDYtxA=",
+    "phase": "PHASE_1",
+    "honest_rounds": 0,
+    "voucher": null
+  }
+}

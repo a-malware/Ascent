@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WalletProvider } from '@/chain/wallet';
+import { NodeProvider } from '@/chain/node.jsx';
 import { useSyncStore } from '@/chain/useSyncStore';
 
 const queryClient = new QueryClient({
@@ -13,7 +13,7 @@ const queryClient = new QueryClient({
   },
 });
 
-/** Inner wrapper — must be inside WalletProvider so useWallet() works. */
+/** Inner wrapper — must be inside NodeProvider so useNode() works. */
 function ChainSync({ children }) {
   useSyncStore();
   return children;
@@ -22,11 +22,11 @@ function ChainSync({ children }) {
 export default function RootLayout({ children }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <WalletProvider>
+      <NodeProvider>
         <ChainSync>
           {children}
         </ChainSync>
-      </WalletProvider>
+      </NodeProvider>
     </QueryClientProvider>
   );
 }

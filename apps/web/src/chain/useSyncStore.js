@@ -1,46 +1,38 @@
 /**
  * chain/useSyncStore.js
  *
- * Drop this hook in a top-level component (e.g. app/layout.jsx or page.jsx)
- * to continuously sync on-chain NodeState → Zustand store.
+ * Keeps the Zustand store in sync with the Python node backend.
+ * Replaces the old Solana-based hook.
  *
- * Usage:
+ * Usage (same as before):
  *   import { useSyncStore } from "@/chain/useSyncStore";
- *   // Inside your root component:
- *   useSyncStore();
+ *   useSyncStore(); // call inside a top-level component
  */
 
 import { useEffect } from "react";
-import { useStore } from "@/store/useStore";
-import { useWallet } from "./wallet";
-import { useNodeStatePolled } from "./accounts";
-import { normalizeNodeState } from "./accounts";
+import { useStore }  from "@/store/useStore";
+import { useNode }   from "./node.jsx";
 
 /**
- * Keeps Zustand store in sync with the current wallet's on-chain NodeState.
- * Polls every 8 seconds. Does nothing when the wallet is disconnected.
+ * Reads the live nodeState from NodeContext (already polling every 6s)
+ * and writes it into the Zustand store whenever it changes.
  */
 export function useSyncStore() {
-  const { getAnchorProvider, publicKey, connected } = useWallet();
-  const provider = connected ? getAnchorProvider() : null;
+  const { nodeState, nodeId } = useNode();
+  const syncFromNode = useStore((s) => s.syncFromNode);
+  const setWallet    = useStore((s) => s.setWallet);
 
-  const { nodeState } = useNodeStatePolled(provider, 8_000);
-  const syncFromChain = useStore((s) => s.syncFromChain);
-  const setWallet     = useStore((s) => s.setWallet);
-
-  // Keep the displayed wallet address in sync
+  // Keep the displayed wallet address (node ID) in sync
   useEffect(() => {
-    if (publicKey) {
-      const addr = publicKey.toBase58();
-      setWallet(`${addr.slice(0, 4)}…${addr.slice(-4)}`);
+    if (nodeId) {
+      setWallet(`${nodeId.slice(0, 6)}…${nodeId.slice(-4)}`);
     }
-  }, [publicKey, setWallet]);
+  }, [nodeId, setWallet]);
 
-  // Sync on-chain node state → store whenever it changes
+  // Sync node state into store whenever it changes
   useEffect(() => {
-    const normalized = normalizeNodeState(nodeState);
-    if (normalized) {
-      syncFromChain(normalized);
+    if (nodeState) {
+      syncFromNode(nodeState);
     }
-  }, [nodeState, syncFromChain]);
+  }, [nodeState, syncFromNode]);
 }

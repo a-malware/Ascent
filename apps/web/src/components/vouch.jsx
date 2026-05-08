@@ -42,11 +42,12 @@ export default function Vouch() {
     addActivity({
       id: Date.now(),
       type: "vouch",
-      message: `Vouched for ${modal.wallet} · ${stakeAmount} SOL staked`,
+      message: `Vouched for ${modal.wallet} · ${stakeAmount} POR staked`,
+
       time: "just now",
     });
     toast.success("Vouch submitted!", {
-      description: `${stakeAmount} SOL staked on ${modal.wallet}`,
+      description: `${stakeAmount} POR staked on ${modal.wallet}`,
     });
     setVouching(false);
     setModal(null);
@@ -170,7 +171,7 @@ export default function Vouch() {
           </div>
         </div>
         <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 4 }}>
-          Stake SOL to help new members join the network
+          Stake POR to help new members join the network
         </div>
       </div>
 
@@ -193,7 +194,7 @@ export default function Vouch() {
         />
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#0D1421" }}>
-            Staking {stakeAmount} SOL per vouch
+            Staking {stakeAmount} POR per vouch
           </div>
           <div style={{ fontSize: 12, color: "#6B7280", marginTop: 3 }}>
             If the user behaves dishonestly, your stake will be slashed. Choose
@@ -492,7 +493,7 @@ export default function Vouch() {
               {[
                 {
                   label: "Stake amount",
-                  value: `${stakeAmount} SOL`,
+                  value: `${stakeAmount} POR`,
                   color: "#0D1421",
                 },
                 {
@@ -543,7 +544,7 @@ export default function Vouch() {
               />
               <div style={{ fontSize: 12, color: "#92400E", lineHeight: 1.5 }}>
                 If this user behaves dishonestly,{" "}
-                <strong>{stakeAmount} SOL</strong> will be slashed from your
+                <strong>{stakeAmount} POR</strong> will be slashed from your
                 stake. This cannot be undone.
               </div>
             </div>

@@ -361,25 +361,19 @@ export default function Splash({ onDone }) {
         pointerEvents: "none",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-          {/* Solana gradient logo */}
-          <svg width="14" height="11" viewBox="0 0 40 30" fill="none" aria-label="Solana">
-            <defs>
-              <linearGradient id="ascent-sol-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%"   stopColor="#9945FF"/>
-                <stop offset="100%" stopColor="#14F195"/>
-              </linearGradient>
-            </defs>
-            <path d="M6 26 L34 26 C36.5 26 37.5 25 39 23 L40.5 21 L12 21 C9.5 21 8.5 22 7 24 Z"           fill="url(#ascent-sol-grad)"/>
-            <path d="M6 16 L34 16 C36.5 16 37.5 15 39 13 L40.5 11 L12 11 C9.5 11 8.5 12 7 14 Z"           fill="url(#ascent-sol-grad)"/>
-            <path d="M39.5 3.5 L11 3.5 C8.5 3.5 7.5 4.5 6 6.5 L4.5 8.5 L33 8.5 C35.5 8.5 36.5 7.5 38 5.5 Z" fill="url(#ascent-sol-grad)"/>
-          </svg>
+          {/* PoR Network brand mark */}
+          <div style={{
+            width: 8, height: 8, borderRadius: "50%",
+            background: "#05C48F",
+            boxShadow: "0 0 6px rgba(5,196,143,0.7)",
+          }} />
           <span style={{
             color:         "#6B7280",
             fontSize:      11,
-            fontWeight:    500,
-            letterSpacing: "0.2px",
+            fontWeight:    600,
+            letterSpacing: "0.5px",
           }}>
-            Powered by Solana
+            Proof-of-Reputation Network
           </span>
         </div>
       </div>

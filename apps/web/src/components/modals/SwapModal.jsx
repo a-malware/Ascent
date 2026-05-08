@@ -28,7 +28,7 @@ function Sheet({ title, onClose, children }) {
 export default function SwapModal({ onClose }) {
   const { tokens, meritBoost, graduated, execSwap } = useStore();
 
-  const [fromSym, setFromSym] = useState("SOL");
+  const [fromSym, setFromSym] = useState("POR");
   const [toSym,   setToSym]   = useState("USDC");
   const [amount,  setAmount]  = useState("");
   const [busy,    setBusy]    = useState(false);
@@ -88,7 +88,7 @@ export default function SwapModal({ onClose }) {
           />
         </div>
         <div style={{ fontSize:11, color:"#9CA3AF", marginTop:6, textAlign:"right" }}>
-          Balance: {fromToken?.balance.toFixed(fromSym === "SOL" ? 2 : 0)} {fromSym}
+          Balance: {fromToken?.balance != null ? fromToken.balance.toFixed(2) : "0.00"} {fromSym}
           {fromAmt > 0 && (
             <button
               onClick={() => setAmount(String(fromToken?.balance ?? 0))}

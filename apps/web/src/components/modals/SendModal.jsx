@@ -35,7 +35,7 @@ export default function SendModal({ onClose }) {
   const { tokens, graduated, execSend } = useStore();
 
   const [toAddr,   setToAddr]   = useState("");
-  const [tokenSym, setTokenSym] = useState("SOL");
+  const [tokenSym, setTokenSym] = useState("POR");
   const [amount,   setAmount]   = useState("");
   const [busy,     setBusy]     = useState(false);
 
@@ -68,7 +68,7 @@ export default function SendModal({ onClose }) {
         <div style={{ fontSize:11, color:"#9CA3AF", fontWeight:600, marginBottom:8 }}>Recipient</div>
         <input
           type="text"
-          placeholder="Wallet address or .sol domain"
+          placeholder="Node ID or wallet address"
           value={toAddr}
           onChange={e => setToAddr(e.target.value)}
           style={{
@@ -126,7 +126,7 @@ export default function SendModal({ onClose }) {
         <div style={{ display:"flex", justifyContent:"space-between", marginTop:6, fontSize:11, color:"#9CA3AF" }}>
           <span>≈ ${usdValue.toFixed(2)} USD</span>
           <span>
-            Balance: {token?.balance.toFixed(tokenSym === "SOL" ? 2 : 0)} {tokenSym}
+            Balance: {token?.balance != null ? token.balance.toFixed(2) : "0.00"} {tokenSym}
             <button
               onClick={() => setAmount(String(token?.balance ?? 0))}
               style={{ marginLeft:6, color:"#0052FF", background:"none", border:"none", cursor:"pointer", fontSize:11, fontWeight:700 }}
