@@ -13,6 +13,7 @@ import SwapModal  from "@/components/modals/SwapModal";
 import SendModal  from "@/components/modals/SendModal";
 import ClaimModal from "@/components/modals/ClaimModal";
 import SlashModal from "@/components/modals/SlashModal";
+import Settings from "@/components/settings";
 import { NodeProvider, NodeStatusBadge } from "@/chain/node.jsx";
 import { useSyncStore } from "@/chain/useSyncStore";
 import {
@@ -42,6 +43,7 @@ export default function App() {
   } = useStore();
 
   const [showSplash, setShowSplash] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
   useSyncStore(); // polls Python backend every 6s → syncs Zustand store
 
   const TABS = [
@@ -56,11 +58,16 @@ export default function App() {
 
   // Long-press on logo resets the demo back to Phase 1
   const pressTimer = useRef(null);
+  const isLongPress = useRef(false);
+  const isPressing = useRef(false);
   const [pressing, setPressing] = useState(false);
 
   const handleLogoPointerDown = useCallback(() => {
+    isPressing.current = true;
+    isLongPress.current = false;
     setPressing(true);
     pressTimer.current = setTimeout(async () => {
+      isLongPress.current = true;
       // Reset server-side mock-db and client-side Zustand store in sync
       await fetch("/api/reset-demo").catch(() => {});
       resetDemo();
@@ -73,6 +80,17 @@ export default function App() {
 
   const handleLogoPointerUp = useCallback(() => {
     clearTimeout(pressTimer.current);
+    if (isPressing.current && !isLongPress.current) {
+      // If we didn't hold long enough for the reset, treat it as a click
+      setShowSettings(true);
+    }
+    isPressing.current = false;
+    setPressing(false);
+  }, []);
+
+  const handleLogoPointerLeave = useCallback(() => {
+    clearTimeout(pressTimer.current);
+    isPressing.current = false;
     setPressing(false);
   }, []);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -157,7 +175,7 @@ export default function App() {
                 <div
                   onPointerDown={handleLogoPointerDown}
                   onPointerUp={handleLogoPointerUp}
-                  onPointerLeave={handleLogoPointerUp}
+                  onPointerLeave={handleLogoPointerLeave}
                   style={{
                     width: 36,
                     height: 36,
@@ -446,6 +464,9 @@ export default function App() {
               );
             })}
           </div>
+          {/* ── Settings screen (overlay) ── */}
+          {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+
           {/* ── Splash screen (first launch overlay) ── */}
           {showSplash && <Splash onDone={() => setShowSplash(false)} />}
 
