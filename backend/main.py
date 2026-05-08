@@ -142,6 +142,13 @@ if _frontend.exists():
     async def serve_frontend():
         return FileResponse(str(_frontend / "index.html"))
 
+@app.get("/terminal", include_in_schema=False)
+async def serve_audit_terminal():
+    audit_path = pathlib.Path(__file__).parent / "audit.html"
+    if audit_path.exists():
+        return FileResponse(str(audit_path))
+    return {"error": "audit.html not found"}
+
 
 if __name__ == "__main__":
     uvicorn.run(

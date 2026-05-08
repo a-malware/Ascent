@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Transparent Verification & Audit Layer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0c;
+      --surface: #111114;
+      --text: #c9c9cf;
+      --accent: #00ffaa;
+      --accent-dim: rgba(0, 255, 170, 0.1);
+      --border: #222226;
+    }
+    body {
+      margin: 0; padding: 20px;
+      background: var(--bg); color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; line-height: 1.5;
+    }
+    .header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px; border-bottom: 1px solid var(--border);
+      padding-bottom: 15px;
+    }
+    .header h1 {
+      margin: 0; font-size: 18px; font-weight: 500; color: white;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .header h1::before {
+      content: "🛡️"; font-size: 20px;
+    }
+    .live-badge {
+      background: var(--accent-dim); color: var(--accent);
+      padding: 4px 10px; border-radius: 4px; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 1px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .live-badge::before {
+      content: ""; display: block; width: 6px; height: 6px;
+      background: var(--accent); border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 var(--accent-dim); }
+      70% { box-shadow: 0 0 0 6px transparent; }
+      100% { box-shadow: 0 0 0 0 transparent; }
+    }
+    .log-container {
+      display: flex; flex-direction: column; gap: 15px;
+    }
+    .log-entry {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; overflow: hidden;
+    }
+    .log-header {
+      background: rgba(255,255,255,0.02); padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between;
+      color: white; font-weight: 500;
+    }
+    .log-cat { color: var(--accent); }
+    .log-body {
+      padding: 12px; white-space: pre-wrap; word-break: break-all;
+    }
+    .cat-crypto { color: #ffb86c; background: rgba(255, 184, 108, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 6px;}
+    .cat-consensus { color: #8be9fd; background: rgba(139, 233, 253, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 6px;}
+    .cat-reputation { color: #ff79c6; background: rgba(255, 121, 198, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 6px;}
+    .log-phase { color: #888; font-size: 11px; margin-left: 8px; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Consensus Observability Layer</h1>
+    <div class="live-badge">Live Audit Feed</div>
+  </div>
+  <div class="log-container" id="log-container">
+    <div style="color: #666">Connecting to node...</div>
+  </div>
+
+  <script>
+    const baseUrl = window.location.origin;
+    const container = document.getElementById('log-container');
+    let lastLogTime = 0;
+    let knownLogs = new Set();
+
+    async function fetchLogs() {
+      try {
+        const r = await fetch(baseUrl + '/audit?limit=20');
+        if (!r.ok) return;
+        const data = await r.json();
+        
+        let newLogs = [];
+        data.logs.forEach(log => {
+            const key = log.timestamp + log.title;
+            if (!knownLogs.has(key)) {
+                knownLogs.add(key);
+                newLogs.push(log);
+            }
+        });
+
+        if (newLogs.length > 0) {
+            if (knownLogs.size === newLogs.length) {
+                container.innerHTML = '';
+            }
+            newLogs.sort((a,b) => b.timestamp - a.timestamp).forEach(log => {
+                const el = document.createElement('div');
+                el.className = 'log-entry';
+                const timeStr = new Date(log.timestamp * 1000).toISOString().split('T')[1].slice(0, -1);
+                
+                let catClass = 'log-cat';
+                let phaseTag = '';
+                if (log.category === 'CRYPTO') { catClass += ' cat-crypto'; phaseTag = 'Phase 1: Verification'; }
+                if (log.category === 'CONSENSUS') { catClass += ' cat-consensus'; phaseTag = 'Phase 3 / Full Node'; }
+                if (log.category === 'REPUTATION') { catClass += ' cat-reputation'; phaseTag = 'Phase 3 / Full Node'; }
+
+                el.innerHTML = `
+                    <div class="log-header">
+                        <span><span class="${catClass}">${log.category}</span> ${log.title} <span class="log-phase">(${phaseTag})</span></span>
+                        <span style="color:#666">${timeStr}</span>
+                    </div>
+                    <div class="log-body">${log.details}</div>
+                `;
+                container.prepend(el);
+            });
+            // keep max 50 in UI
+            while (container.children.length > 50) {
+                container.removeChild(container.lastChild);
+            }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    
+    // Initial fetch and poll
+    fetchLogs();
+    setInterval(fetchLogs, 2000);
+  </script>
+</body>
+</html>
