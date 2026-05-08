@@ -13,8 +13,9 @@ const INITIAL_STATE = {
   walletBalance: 0,
   walletStaked:  0,
   tokens: [
-    { id: "por", symbol: "POR", name: "PoR Native", amount: 100, balance: 100, price: 1.5, value: 150, change24h: +5.2 }
+    { id: "por", symbol: "POR", name: "PoR Native", logo: "🛡️", amount: 0, balance: 0, price: 1.5, value: 0, change24h: +5.2 }
   ],
+  chainHistory: [],  // on-chain transactions from backend
 
   // ── PoR state ───────────────────────────────────────────────────────────────
   reputation:       0,
@@ -124,9 +125,17 @@ export const useStore = create((set) => ({
         peersCount:  normalized.peersCount,
         chainHeight: normalized.chainHeight,
 
-        // Wallet
+        // Wallet — sync real on-chain balance into the tokens array
         walletBalance: normalized.walletBalance,
         walletStaked:  normalized.walletStaked,
+        tokens: [{
+          id: "por", symbol: "POR", name: "PoR Native", logo: "🛡️",
+          amount:    normalized.walletBalance,
+          balance:   normalized.walletBalance,
+          price:     1.5,
+          value:     normalized.walletBalance * 1.5,
+          change24h: +5.2,
+        }],
 
         // PoR protocol state
         phase:          normalized.phase,
@@ -197,8 +206,14 @@ export const useStore = create((set) => ({
       const short = toAddress.length > 12
         ? `${toAddress.slice(0, 4)}...${toAddress.slice(-4)}`
         : toAddress;
+      const newBalance = Math.max(0, state.walletBalance - amount);
       return {
-        walletBalance: Math.max(0, state.walletBalance - amount),
+        walletBalance: newBalance,
+        tokens: state.tokens.map(t =>
+          t.symbol === tokenSymbol
+            ? { ...t, balance: newBalance, amount: newBalance, value: newBalance * t.price }
+            : t
+        ),
         activities: [
           { id: Date.now(), type: "send",
             message: `Sent ${amount} POR to ${short}`,
@@ -207,6 +222,19 @@ export const useStore = create((set) => ({
         ],
       };
     }),
+
+  // Update balance from on-chain fetch (called by useSyncStore wallet poll)
+  setChainHistory: (chainHistory) => set({ chainHistory }),
+  setTokenBalance: (balance, staked) =>
+    set((state) => ({
+      walletBalance: balance,
+      walletStaked:  staked,
+      tokens: state.tokens.map(t =>
+        t.symbol === "POR"
+          ? { ...t, balance, amount: balance, value: balance * t.price }
+          : t
+      ),
+    })),
 
   execSwap: (fromSymbol, toSymbol, fromAmount, boostedOut) =>
     set((state) => ({

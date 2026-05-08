@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useStore } from "@/store/useStore";
 import { X, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { sendTokens, fetchWallet, fetchWalletHistory } from "@/chain/api";
 
 const DEMO_ADDRESSES = [
   { label: "8xYz...4Cd7", full: "8xYz4Cd7" },
@@ -32,7 +33,7 @@ function Sheet({ title, onClose, children }) {
 }
 
 export default function SendModal({ onClose }) {
-  const { tokens, graduated, execSend } = useStore();
+  const { tokens, graduated, execSend, setTokenBalance, setChainHistory } = useStore();
 
   const [toAddr,   setToAddr]   = useState("");
   const [tokenSym, setTokenSym] = useState("POR");
@@ -44,21 +45,47 @@ export default function SendModal({ onClose }) {
   const usdValue = fromAmt * (token?.price ?? 1);
   const insufficient = fromAmt > (token?.balance ?? 0);
   const canSend = fromAmt > 0 && toAddr.trim().length >= 4 && !insufficient;
-  const feeWaived = graduated; // Zero-gas only after full graduation
+  const feeWaived = graduated;
 
   async function confirm() {
     if (!canSend) return;
     setBusy(true);
-    await new Promise(r => setTimeout(r, 1300));
-    execSend(tokenSym, fromAmt, toAddr.trim());
-    toast.success("Transaction sent!", {
-      description: feeWaived
-        ? `${fromAmt} ${tokenSym} sent · Network fee waived`
-        : `${fromAmt} ${tokenSym} sent · Fee: $0.02`,
-    });
+    try {
+      // 1. Optimistically update UI balance
+      execSend(tokenSym, fromAmt, toAddr.trim());
+
+      // 2. Actually broadcast to the PoR-Chain
+      const result = await sendTokens(toAddr.trim(), fromAmt);
+      const txId = result?.tx?.tx_id ?? "";
+      const shortTx = txId ? `tx: ${txId.slice(0, 8)}…` : "";
+
+      toast.success("Transaction broadcast!", {
+        description: feeWaived
+          ? `${fromAmt} ${tokenSym} sent · Fee waived · ${shortTx}`
+          : `${fromAmt} ${tokenSym} sent · ${shortTx}`,
+      });
+
+      // 3. Re-fetch balance + history to stay in sync once mined
+      setTimeout(async () => {
+        try {
+          const [balData, histData] = await Promise.all([fetchWallet(), fetchWalletHistory()]);
+          setTokenBalance(balData.balance ?? 0, balData.staked ?? 0);
+          setChainHistory(histData.transactions ?? []);
+        } catch { /* silent */ }
+      }, 3000);
+
+    } catch (err) {
+      toast.error("Send failed", { description: err.message });
+      // Revert optimistic update
+      try {
+        const balData = await fetchWallet();
+        setTokenBalance(balData.balance ?? 0, balData.staked ?? 0);
+      } catch { /* silent */ }
+    }
     setBusy(false);
     onClose();
   }
+
 
   return (
     <Sheet title="Send" onClose={onClose}>

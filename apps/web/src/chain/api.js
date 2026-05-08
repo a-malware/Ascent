@@ -148,3 +148,8 @@ export async function sendTokens(to, amount) {
     body: JSON.stringify({ to, amount }),
   });
 }
+
+/** Get on-chain transaction history for this node's address. */
+export async function fetchWalletHistory() {
+  return req("/wallet/history");
+}

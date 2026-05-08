@@ -34,6 +34,9 @@ const ACTIVITY_META = {
 export default function Home() {
   const {
     walletBalance,
+    walletStaked,
+    peersCount,
+    chainHeight,
     reputation,
     phase,
     tasksCompleted,
@@ -198,6 +201,50 @@ export default function Home() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* ── Network Status Strip ─────────────────────────────────────────────── */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "1fr 1fr 1fr",
+        gap: 10, marginBottom: 20,
+      }}>
+        {[
+          {
+            label: "Peers",
+            value: peersCount,
+            icon: "🌐",
+            color: peersCount > 0 ? "#05C48F" : "#9CA3AF",
+            bg: peersCount > 0 ? "#ECFDF5" : "#F9FAFB",
+          },
+          {
+            label: "Block Height",
+            value: `#${chainHeight}`,
+            icon: "📦",
+            color: "#0052FF",
+            bg: "#EEF3FF",
+          },
+          {
+            label: "Staked",
+            value: `${walletStaked.toFixed(2)} POR`,
+            icon: "🔒",
+            color: walletStaked > 0 ? "#F59E0B" : "#9CA3AF",
+            bg: walletStaked > 0 ? "#FFFBEB" : "#F9FAFB",
+          },
+        ].map(({ label, value, icon, color, bg }) => (
+          <div key={label} style={{
+            background: bg,
+            borderRadius: 16, padding: "12px 10px",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color, letterSpacing: -0.5 }}>
+              {value}
+            </div>
+            <div style={{ fontSize: 10, color: "#9CA3AF", fontWeight: 600, marginTop: 2 }}>
+              {label.toUpperCase()}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Large Reputation Orb Card — long-press to open Slash Simulator */}
