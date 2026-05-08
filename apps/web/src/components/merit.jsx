@@ -12,9 +12,13 @@ import {
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
-import { useWallet }     from "@/chain/wallet";
-import { registerNode, submitTaskProof, vouchForNode, castVote } from "@/chain/instructions";
-import { useNetworkConfig, useNodeState } from "@/chain/accounts";
+const useWallet = () => ({ connected: false, getAnchorProvider: () => null });
+const useNetworkConfig = () => ({ config: null });
+const useNodeState = () => ({ nodeState: null, refetch: () => {} });
+const registerNode = async () => {};
+const submitTaskProof = async () => {};
+const vouchForNode = async () => {};
+const castVote = async () => {};
 
 // ─── Phase 1: Task definitions (5 tasks for demo) ──────────────────────────────
 const TASKS = [
